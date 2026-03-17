@@ -3,11 +3,19 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { OutlinerWireframe } from "@/components/OutlinerWireframe";
+import type { OutlineRow } from "@/lib/outline/types";
 import { OUTLINE_COLLAPSE_STORAGE_KEY, OUTLINE_STORAGE_KEY } from "@/lib/outline/storage";
 
 afterEach(() => {
   cleanup();
 });
+
+function loadSavedRows(): OutlineRow[] {
+  const saved = localStorage.getItem(OUTLINE_STORAGE_KEY);
+  expect(saved).not.toBeNull();
+
+  return JSON.parse(saved as string) as OutlineRow[];
+}
 
 describe("OutlinerWireframe", () => {
   it("renders editable rows and saves changes on each keystroke", async () => {
@@ -70,5 +78,45 @@ describe("OutlinerWireframe", () => {
     expect(list.getAttribute("data-ui-style")).toBe("layeredGuides");
     expect(screen.queryByRole("button", { name: /Wireframe visuals/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /What to edit next\?/i })).toBeNull();
+  });
+
+  it("indents a row and its descendants when Tab is pressed", async () => {
+    localStorage.clear();
+    render(<OutlinerWireframe />);
+
+    const questionsInput = await screen.findByDisplayValue("Questions");
+    await userEvent.click(questionsInput);
+    await userEvent.keyboard("{Tab}");
+
+    const rows = loadSavedRows();
+    expect(rows.find((row) => row.id === "row-5")?.depth).toBe(2);
+    expect(rows.find((row) => row.id === "row-6")?.depth).toBe(3);
+    expect(rows.find((row) => row.id === "row-7")?.depth).toBe(3);
+  });
+
+  it("outdents a row and its descendants when Shift+Tab is pressed", async () => {
+    localStorage.clear();
+    render(<OutlinerWireframe />);
+
+    const mvpScopeInput = await screen.findByDisplayValue("MVP scope");
+    await userEvent.click(mvpScopeInput);
+    await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+
+    const rows = loadSavedRows();
+    expect(rows.find((row) => row.id === "row-2")?.depth).toBe(0);
+    expect(rows.find((row) => row.id === "row-3")?.depth).toBe(1);
+    expect(rows.find((row) => row.id === "row-4")?.depth).toBe(1);
+  });
+
+  it("does not outdent top-level rows when Shift+Tab is pressed", async () => {
+    localStorage.clear();
+    render(<OutlinerWireframe />);
+
+    const rootInput = await screen.findByDisplayValue("Project Brain Dump");
+    await userEvent.click(rootInput);
+    await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+
+    const rows = loadSavedRows();
+    expect(rows.find((row) => row.id === "row-1")?.depth).toBe(0);
   });
 });

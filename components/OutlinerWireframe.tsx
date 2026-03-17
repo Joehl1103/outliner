@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import {
   loadCollapsedById,
   loadOutline,
@@ -65,6 +65,59 @@ function computeVisibleRows(
   });
 
   return visibleRows;
+}
+
+function findSubtreeEndIndex(rows: OutlineRow[], startIndex: number): number {
+  const parentDepth = rows[startIndex]?.depth;
+  if (typeof parentDepth !== "number") {
+    return startIndex;
+  }
+
+  let endIndex = startIndex;
+
+  for (let index = startIndex + 1; index < rows.length; index += 1) {
+    if (rows[index].depth <= parentDepth) {
+      break;
+    }
+
+    endIndex = index;
+  }
+
+  return endIndex;
+}
+
+function shiftRowAndSubtreeDepth(rows: OutlineRow[], targetId: string, outdent: boolean): OutlineRow[] {
+  const rowIndex = rows.findIndex((row) => row.id === targetId);
+  if (rowIndex < 0) {
+    return rows;
+  }
+
+  const row = rows[rowIndex];
+  const delta = outdent ? -1 : 1;
+
+  if (outdent && row.depth === 0) {
+    return rows;
+  }
+
+  if (!outdent) {
+    if (rowIndex === 0) {
+      return rows;
+    }
+
+    const maxAllowedDepth = rows[rowIndex - 1].depth + 1;
+    if (row.depth >= maxAllowedDepth) {
+      return rows;
+    }
+  }
+
+  const subtreeEndIndex = findSubtreeEndIndex(rows, rowIndex);
+  return rows.map((candidate, index) => {
+    if (index < rowIndex || index > subtreeEndIndex) {
+      return candidate;
+    }
+
+    return { ...candidate, depth: candidate.depth + delta };
+  });
 }
 
 export function OutlinerWireframe() {
@@ -169,6 +222,15 @@ export function OutlinerWireframe() {
     });
   }
 
+  function handleRowKeyDown(event: KeyboardEvent<HTMLInputElement>, targetId: string) {
+    if (event.key !== "Tab" || event.altKey || event.ctrlKey || event.metaKey) {
+      return;
+    }
+
+    event.preventDefault();
+    setRows((prevRows) => shiftRowAndSubtreeDepth(prevRows, targetId, event.shiftKey));
+  }
+
   return (
     <div className="outline-ui">
       <div className={`outline-canvas outline-canvas--${ACTIVE_UI_STYLE}`}>
@@ -232,6 +294,7 @@ export function OutlinerWireframe() {
                   className="outline-input"
                   value={row.text}
                   onChange={(event) => handleRowChange(row.id, event.target.value)}
+                  onKeyDown={(event) => handleRowKeyDown(event, row.id)}
                   aria-label={`Row ${index + 1}`}
                 />
               </li>

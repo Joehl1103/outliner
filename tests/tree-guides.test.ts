@@ -33,4 +33,16 @@ describe("computeChildGuideSegments", () => {
 
     expect(computeChildGuideSegments(rows)).toEqual([]);
   });
+
+  it("includes a segment for top-level sibling rows", () => {
+    const rows: OutlineRow[] = [
+      { id: "0", text: "Root A", depth: 0 },
+      { id: "1", text: "Root B", depth: 0 },
+      { id: "2", text: "Root C", depth: 0 },
+    ];
+
+    expect(computeChildGuideSegments(rows)).toEqual([
+      { key: "0--1-0-2", depth: 0, parentIndex: -1, startIndex: 0, endIndex: 2 },
+    ]);
+  });
 });

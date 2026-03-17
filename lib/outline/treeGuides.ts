@@ -13,12 +13,8 @@ export function computeChildGuideSegments(rows: OutlineRow[]): ChildGuideSegment
   const groupMap = new Map<string, number[]>();
 
   rows.forEach((row, index) => {
-    if (row.depth <= 0) {
-      lastIndexByDepth.set(0, index);
-      return;
-    }
+    const parentIndex = row.depth === 0 ? -1 : lastIndexByDepth.get(row.depth - 1);
 
-    const parentIndex = lastIndexByDepth.get(row.depth - 1);
     if (typeof parentIndex === "number") {
       const groupKey = `${row.depth}:${parentIndex}`;
       const indices = groupMap.get(groupKey) ?? [];
