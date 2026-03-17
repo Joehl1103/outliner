@@ -1,0 +1,11 @@
+.next
+node_modules
+coverage
+dist
+*.log
+.DS_Store
+*.csv
+*.xlsx
+input/
+output/
+.env
