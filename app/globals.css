@@ -5,9 +5,6 @@
   --muted: #6a655a;
   --line: rgba(109, 93, 66, 0.2);
   --line-strong: rgba(109, 93, 66, 0.34);
-  --hover: #f4efe3;
-  --guide-step: 1.4rem;
-  --guide-offset: 1.1rem;
 }
 
 * {
@@ -85,24 +82,36 @@ body {
   position: relative;
 }
 
+.outline-guide-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.outline-guide-segment {
+  position: absolute;
+  width: 1px;
+  transform: translateX(-50%);
+  background: var(--line-strong);
+}
+
+.outline-guide-segment--rowPseudoGuides {
+  border-left: 1px dashed var(--line-strong);
+  background: transparent;
+}
+
+.outline-guide-segment--domGuideColumns {
+  width: 2px;
+  background: color-mix(in srgb, var(--line-strong) 65%, transparent);
+}
+
 .outline-list {
   margin: 0;
   padding: 0;
   list-style: none;
   position: relative;
   z-index: 2;
-}
-
-.outline-list--layeredGuides {
-  background-image: repeating-linear-gradient(
-    90deg,
-    transparent 0,
-    transparent calc(var(--guide-step) - 1px),
-    var(--line) calc(var(--guide-step) - 1px),
-    var(--line) var(--guide-step)
-  );
-  background-position: var(--guide-offset) 0;
-  background-size: var(--guide-step) 100%;
 }
 
 .outline-row {
@@ -114,28 +123,6 @@ body {
   padding-bottom: 0.52rem;
   min-height: 2rem;
   line-height: 1.45;
-}
-
-.outline-list--rowPseudoGuides .outline-row::before {
-  content: "";
-  position: absolute;
-  left: var(--guide-offset);
-  right: 0;
-  top: 0;
-  bottom: 0;
-  background-image: repeating-linear-gradient(
-    90deg,
-    transparent 0,
-    transparent calc(var(--guide-step) - 1px),
-    var(--line-strong) calc(var(--guide-step) - 1px),
-    var(--line-strong) var(--guide-step)
-  );
-  pointer-events: none;
-  opacity: 0.75;
-}
-
-.outline-row:hover {
-  background: var(--hover);
 }
 
 .outline-bullet {
@@ -155,25 +142,6 @@ body {
   color: var(--ink);
   font: inherit;
   line-height: 1.45;
-}
-
-.outline-input:focus {
-  background: rgba(109, 93, 66, 0.06);
-}
-
-.outline-dom-guides {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-}
-
-.outline-dom-guide {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--line-strong);
 }
 
 @media (max-width: 640px) {

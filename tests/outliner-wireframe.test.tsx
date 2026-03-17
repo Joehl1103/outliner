@@ -1,5 +1,5 @@
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { OutlinerWireframe } from "@/components/OutlinerWireframe";
@@ -12,7 +12,7 @@ afterEach(() => {
 describe("OutlinerWireframe", () => {
   it("renders editable rows and saves changes on each keystroke", async () => {
     localStorage.clear();
-    render(<OutlinerWireframe />);
+    const { container } = render(<OutlinerWireframe />);
 
     const firstRowInput = await screen.findByDisplayValue("Project Brain Dump");
     await userEvent.clear(firstRowInput);
@@ -22,19 +22,16 @@ describe("OutlinerWireframe", () => {
 
     const saved = localStorage.getItem(OUTLINE_STORAGE_KEY);
     expect(saved).toContain("Project Alpha");
+
+    expect(container.querySelectorAll(".outline-guide-segment")).toHaveLength(3);
   });
 
-  it("switches style modes from top toggle", async () => {
+  it("uses layered guide mode without toggle buttons", async () => {
     localStorage.clear();
     render(<OutlinerWireframe />);
 
     const list = await screen.findByRole("list", { name: "Outliner rows" });
-    await waitFor(() => {
-      expect(list.getAttribute("data-ui-style")).toBe("layeredGuides");
-    });
-
-    await userEvent.click(screen.getByRole("button", { name: "DOM Columns" }));
-
-    expect(list.getAttribute("data-ui-style")).toBe("domGuideColumns");
+    expect(list.getAttribute("data-ui-style")).toBe("layeredGuides");
+    expect(screen.queryByRole("button", { name: "DOM Columns" })).toBeNull();
   });
 });
