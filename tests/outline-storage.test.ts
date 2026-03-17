@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { defaultOutline } from "@/lib/outline/defaultOutline";
-import { loadOutline, OUTLINE_STORAGE_KEY, saveOutline } from "@/lib/outline/storage";
+import {
+  loadCollapsedById,
+  loadOutline,
+  OUTLINE_COLLAPSE_STORAGE_KEY,
+  OUTLINE_STORAGE_KEY,
+  saveCollapsedById,
+  saveOutline,
+} from "@/lib/outline/storage";
 
 describe("outline storage", () => {
   it("seeds defaults when storage is empty", () => {
@@ -52,5 +59,27 @@ describe("outline storage", () => {
     const rows = loadOutline();
 
     expect(rows[0].text).toBe("Renamed top node");
+  });
+
+  it("returns empty collapse map when collapse storage is empty", () => {
+    localStorage.clear();
+
+    expect(loadCollapsedById()).toEqual({});
+  });
+
+  it("roundtrips collapse state through save and load", () => {
+    localStorage.clear();
+    const collapsed = { "row-2": true, "row-5": false };
+
+    saveCollapsedById(collapsed);
+
+    expect(loadCollapsedById()).toEqual(collapsed);
+  });
+
+  it("falls back to empty collapse map when parsed collapse shape is invalid", () => {
+    localStorage.clear();
+    localStorage.setItem(OUTLINE_COLLAPSE_STORAGE_KEY, JSON.stringify(["bad-shape"]));
+
+    expect(loadCollapsedById()).toEqual({});
   });
 });

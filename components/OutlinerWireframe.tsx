@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { loadOutline, saveOutline } from "@/lib/outline/storage";
+import {
+  loadCollapsedById,
+  loadOutline,
+  saveCollapsedById,
+  saveOutline,
+  type CollapsedById,
+} from "@/lib/outline/storage";
 import { computeChildGuideSegments } from "@/lib/outline/treeGuides";
 import type { OutlineRow } from "@/lib/outline/types";
 
@@ -19,17 +25,67 @@ type RenderedGuideSegment = {
   height: number;
 };
 
+function findParentRowIds(rows: OutlineRow[]): Set<string> {
+  const parentRowIds = new Set<string>();
+
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
+    const nextRow = rows[index + 1];
+
+    if (nextRow && nextRow.depth > row.depth) {
+      parentRowIds.add(row.id);
+    }
+  }
+
+  return parentRowIds;
+}
+
+function computeVisibleRows(
+  rows: OutlineRow[],
+  parentRowIds: Set<string>,
+  collapsedById: CollapsedById,
+): OutlineRow[] {
+  const visibleRows: OutlineRow[] = [];
+  let hiddenFromDepth: number | null = null;
+
+  rows.forEach((row) => {
+    if (hiddenFromDepth !== null) {
+      if (row.depth > hiddenFromDepth) {
+        return;
+      }
+
+      hiddenFromDepth = null;
+    }
+
+    visibleRows.push(row);
+
+    if (parentRowIds.has(row.id) && collapsedById[row.id]) {
+      hiddenFromDepth = row.depth;
+    }
+  });
+
+  return visibleRows;
+}
+
 export function OutlinerWireframe() {
   const [rows, setRows] = useState<OutlineRow[]>([]);
+  const [collapsedById, setCollapsedById] = useState<CollapsedById>({});
   const [hasLoaded, setHasLoaded] = useState(false);
   const [guideSegments, setGuideSegments] = useState<RenderedGuideSegment[]>([]);
   const listRef = useRef<HTMLUListElement | null>(null);
-  const bulletRefs = useRef<Record<string, HTMLSpanElement | null>>({});
+  const bulletRefs = useRef<Record<string, HTMLElement | null>>({});
 
-  const structuralSegments = useMemo(() => computeChildGuideSegments(rows), [rows]);
+  const parentRowIds = useMemo(() => findParentRowIds(rows), [rows]);
+  const visibleRows = useMemo(
+    () => computeVisibleRows(rows, parentRowIds, collapsedById),
+    [rows, parentRowIds, collapsedById],
+  );
+
+  const structuralSegments = useMemo(() => computeChildGuideSegments(visibleRows), [visibleRows]);
 
   useEffect(() => {
     setRows(loadOutline());
+    setCollapsedById(loadCollapsedById());
     setHasLoaded(true);
   }, []);
 
@@ -38,6 +94,12 @@ export function OutlinerWireframe() {
       saveOutline(rows);
     }
   }, [hasLoaded, rows]);
+
+  useEffect(() => {
+    if (hasLoaded) {
+      saveCollapsedById(collapsedById);
+    }
+  }, [collapsedById, hasLoaded]);
 
   useLayoutEffect(() => {
     function measureGuides() {
@@ -49,8 +111,8 @@ export function OutlinerWireframe() {
 
       const listRect = listElement.getBoundingClientRect();
       const measured = structuralSegments.flatMap((segment) => {
-        const startRow = rows[segment.startIndex];
-        const endRow = rows[segment.endIndex];
+        const startRow = visibleRows[segment.startIndex];
+        const endRow = visibleRows[segment.endIndex];
         if (!startRow || !endRow) {
           return [];
         }
@@ -85,12 +147,26 @@ export function OutlinerWireframe() {
     return () => {
       window.removeEventListener("resize", measureGuides);
     };
-  }, [rows, structuralSegments]);
+  }, [structuralSegments, visibleRows]);
 
   function handleRowChange(targetId: string, nextText: string) {
     setRows((prevRows) =>
       prevRows.map((row) => (row.id === targetId ? { ...row, text: nextText } : row)),
     );
+  }
+
+  function handleRowCollapseToggle(targetId: string) {
+    setCollapsedById((prev) => {
+      const next = { ...prev };
+
+      if (next[targetId]) {
+        delete next[targetId];
+      } else {
+        next[targetId] = true;
+      }
+
+      return next;
+    });
   }
 
   return (
@@ -116,29 +192,51 @@ export function OutlinerWireframe() {
           data-ui-style={ACTIVE_UI_STYLE}
           aria-label="Outliner rows"
         >
-          {rows.map((row, index) => (
-            <li
-              key={row.id}
-              className="outline-row"
-              style={{ paddingLeft: `${BASE_INDENT_REM + row.depth * DEPTH_STEP_REM}rem` }}
-            >
-              <span
-                ref={(node) => {
-                  bulletRefs.current[row.id] = node;
-                }}
-                className="outline-bullet"
-                aria-hidden="true"
+          {visibleRows.map((row, index) => {
+            const isParent = parentRowIds.has(row.id);
+            const isCollapsed = Boolean(collapsedById[row.id]);
+            const rowName = row.text.trim() || `Row ${index + 1}`;
+
+            return (
+              <li
+                key={row.id}
+                className="outline-row"
+                style={{ paddingLeft: `${BASE_INDENT_REM + row.depth * DEPTH_STEP_REM}rem` }}
               >
-                •
-              </span>
-              <input
-                className="outline-input"
-                value={row.text}
-                onChange={(event) => handleRowChange(row.id, event.target.value)}
-                aria-label={`Row ${index + 1}`}
-              />
-            </li>
-          ))}
+                {isParent ? (
+                  <button
+                    type="button"
+                    ref={(node) => {
+                      bulletRefs.current[row.id] = node;
+                    }}
+                    className={`outline-disclosure ${
+                      isCollapsed ? "outline-disclosure--collapsed" : "outline-disclosure--expanded"
+                    }`}
+                    onClick={() => handleRowCollapseToggle(row.id)}
+                    aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${rowName}`}
+                  >
+                    +
+                  </button>
+                ) : (
+                  <span
+                    ref={(node) => {
+                      bulletRefs.current[row.id] = node;
+                    }}
+                    className="outline-bullet"
+                    aria-hidden="true"
+                  >
+                    •
+                  </span>
+                )}
+                <input
+                  className="outline-input"
+                  value={row.text}
+                  onChange={(event) => handleRowChange(row.id, event.target.value)}
+                  aria-label={`Row ${index + 1}`}
+                />
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>

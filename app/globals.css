@@ -132,6 +132,47 @@ body {
   flex: 0 0 auto;
 }
 
+.outline-disclosure {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #434343;
+  width: 0.65rem;
+  text-align: center;
+  flex: 0 0 auto;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow:
+    0 0 0.08rem rgba(236, 236, 236, 0.82),
+    0 0 0.5rem rgba(198, 198, 198, 0.55);
+  transition: color 130ms ease, text-shadow 130ms ease, opacity 130ms ease;
+}
+
+.outline-disclosure--expanded {
+  opacity: 0.72;
+  text-shadow:
+    0 0 0.05rem rgba(232, 232, 232, 0.64),
+    0 0 0.35rem rgba(188, 188, 188, 0.42);
+}
+
+.outline-disclosure--collapsed {
+  opacity: 1;
+}
+
+.outline-disclosure:hover {
+  color: #353535;
+  text-shadow:
+    0 0 0.09rem rgba(242, 242, 242, 0.9),
+    0 0 0.62rem rgba(204, 204, 204, 0.68);
+}
+
+.outline-disclosure:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--line-strong) 70%, transparent);
+  border-radius: 4px;
+}
+
 .outline-input {
   border: 0;
   outline: 0;
