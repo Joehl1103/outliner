@@ -1,11 +1,13 @@
 :root {
   color-scheme: light;
   --bg: #f6f3ec;
-  --paper: #fffdf8;
   --ink: #1b1b1b;
   --muted: #6a655a;
-  --line: #ece5d7;
+  --line: rgba(109, 93, 66, 0.2);
+  --line-strong: rgba(109, 93, 66, 0.34);
   --hover: #f4efe3;
+  --guide-step: 1.4rem;
+  --guide-offset: 1.1rem;
 }
 
 * {
@@ -29,47 +31,107 @@ body {
 }
 
 .page-shell {
+  width: min(860px, 100%);
+  margin: 0 auto;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: 0.25rem;
   padding: 3.5rem 1.25rem;
 }
 
-.outline-container {
-  width: min(760px, 100%);
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  padding: 1.5rem 1.25rem 2rem;
-  box-shadow: 0 12px 36px rgba(55, 41, 16, 0.08);
-}
-
 .outline-title {
-  margin: 0;
+  margin: 0 0 0.15rem;
   font-size: clamp(1.25rem, 2.3vw, 1.65rem);
 }
 
 .outline-subtitle {
-  margin: 0.3rem 0 0;
+  margin: 0 0 0.95rem;
   color: var(--muted);
   font-size: 0.96rem;
 }
 
+.outline-ui {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.outline-toggle {
+  display: inline-flex;
+  gap: 0.38rem;
+  flex-wrap: wrap;
+}
+
+.outline-toggle-button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  padding: 0.2rem 0.45rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.outline-toggle-button:hover {
+  background: rgba(109, 93, 66, 0.08);
+}
+
+.outline-toggle-button.is-active {
+  color: var(--ink);
+  background: rgba(109, 93, 66, 0.16);
+}
+
+.outline-canvas {
+  position: relative;
+}
+
 .outline-list {
-  margin: 1.35rem 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
-  border-top: 1px solid var(--line);
+  position: relative;
+  z-index: 2;
+}
+
+.outline-list--layeredGuides {
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0,
+    transparent calc(var(--guide-step) - 1px),
+    var(--line) calc(var(--guide-step) - 1px),
+    var(--line) var(--guide-step)
+  );
+  background-position: var(--guide-offset) 0;
+  background-size: var(--guide-step) 100%;
 }
 
 .outline-row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.62rem;
-  border-bottom: 1px solid var(--line);
+  gap: 0.58rem;
   padding-top: 0.52rem;
   padding-bottom: 0.52rem;
+  min-height: 2rem;
   line-height: 1.45;
-  transition: background-color 140ms ease;
+}
+
+.outline-list--rowPseudoGuides .outline-row::before {
+  content: "";
+  position: absolute;
+  left: var(--guide-offset);
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0,
+    transparent calc(var(--guide-step) - 1px),
+    var(--line-strong) calc(var(--guide-step) - 1px),
+    var(--line-strong) var(--guide-step)
+  );
+  pointer-events: none;
+  opacity: 0.75;
 }
 
 .outline-row:hover {
@@ -83,13 +145,39 @@ body {
   flex: 0 0 auto;
 }
 
+.outline-input {
+  border: 0;
+  outline: 0;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.45;
+}
+
+.outline-input:focus {
+  background: rgba(109, 93, 66, 0.06);
+}
+
+.outline-dom-guides {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.outline-dom-guide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line-strong);
+}
+
 @media (max-width: 640px) {
   .page-shell {
-    padding: 1.2rem 0.7rem;
-  }
-
-  .outline-container {
-    border-radius: 14px;
-    padding: 1.05rem 0.85rem 1.2rem;
+    padding: 1.2rem 0.7rem 1.5rem;
   }
 }

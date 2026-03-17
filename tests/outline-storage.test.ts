@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defaultOutline } from "@/lib/outline/defaultOutline";
-import { loadOutline, OUTLINE_STORAGE_KEY } from "@/lib/outline/storage";
+import { loadOutline, OUTLINE_STORAGE_KEY, saveOutline } from "@/lib/outline/storage";
 
 describe("outline storage", () => {
   it("seeds defaults when storage is empty", () => {
@@ -41,5 +41,16 @@ describe("outline storage", () => {
     const rows = loadOutline();
 
     expect(rows).toEqual(defaultOutline);
+  });
+
+  it("roundtrips edited row text through save and load", () => {
+    localStorage.clear();
+    const edited = defaultOutline.map((row) => ({ ...row }));
+    edited[0].text = "Renamed top node";
+
+    saveOutline(edited);
+    const rows = loadOutline();
+
+    expect(rows[0].text).toBe("Renamed top node");
   });
 });

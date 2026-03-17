@@ -4,9 +4,10 @@ Workflowy-style outliner MVP wireframe built with Next.js.
 
 ## Current Scope
 
-- Static wireframe rows (read-only)
+- Always-editable rows (changes saved per keystroke)
 - Browser persistence via `localStorage`
 - Seeded default outline on first load
+- 3-way guide style toggle (`Layered Guides`, `Row Guides`, `DOM Columns`)
 
 ## Run Locally
 
