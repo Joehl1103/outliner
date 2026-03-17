@@ -12,6 +12,7 @@ import { computeChildGuideSegments } from "@/lib/outline/treeGuides";
 import type { OutlineRow } from "@/lib/outline/types";
 
 type UiStyle = "layeredGuides" | "rowPseudoGuides" | "domGuideColumns";
+type EditorMode = "insert" | "normal";
 
 const ACTIVE_UI_STYLE: UiStyle = "layeredGuides";
 
@@ -122,11 +123,13 @@ function shiftRowAndSubtreeDepth(rows: OutlineRow[], targetId: string, outdent: 
 
 export function OutlinerWireframe() {
   const [rows, setRows] = useState<OutlineRow[]>([]);
+  const [mode, setMode] = useState<EditorMode>("insert");
   const [collapsedById, setCollapsedById] = useState<CollapsedById>({});
   const [hasLoaded, setHasLoaded] = useState(false);
   const [guideSegments, setGuideSegments] = useState<RenderedGuideSegment[]>([]);
   const listRef = useRef<HTMLUListElement | null>(null);
   const bulletRefs = useRef<Record<string, HTMLElement | null>>({});
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const parentRowIds = useMemo(() => findParentRowIds(rows), [rows]);
   const visibleRows = useMemo(
@@ -222,13 +225,111 @@ export function OutlinerWireframe() {
     });
   }
 
-  function handleRowKeyDown(event: KeyboardEvent<HTMLInputElement>, targetId: string) {
-    if (event.key !== "Tab" || event.altKey || event.ctrlKey || event.metaKey) {
+  function focusRowInput(targetId: string, placeCursorAtEnd = false) {
+    const targetInput = inputRefs.current[targetId];
+    if (!targetInput) {
+      return;
+    }
+
+    targetInput.focus();
+
+    if (!placeCursorAtEnd) {
+      return;
+    }
+
+    const cursorPosition = targetInput.value.length;
+    targetInput.setSelectionRange(cursorPosition, cursorPosition);
+  }
+
+  function focusPreviousVisibleRow(currentIndex: number) {
+    const previousRow = visibleRows[currentIndex - 1];
+    if (previousRow) {
+      focusRowInput(previousRow.id);
+    }
+  }
+
+  function focusNextVisibleRow(currentIndex: number) {
+    const nextRow = visibleRows[currentIndex + 1];
+    if (nextRow) {
+      focusRowInput(nextRow.id);
+    }
+  }
+
+  function focusParentVisibleRow(currentIndex: number) {
+    const currentRow = visibleRows[currentIndex];
+    if (!currentRow) {
+      return;
+    }
+
+    for (let index = currentIndex - 1; index >= 0; index -= 1) {
+      const candidate = visibleRows[index];
+      if (candidate.depth < currentRow.depth) {
+        focusRowInput(candidate.id);
+        return;
+      }
+    }
+  }
+
+  function focusFirstChildVisibleRow(currentIndex: number) {
+    const currentRow = visibleRows[currentIndex];
+    const candidate = visibleRows[currentIndex + 1];
+
+    if (currentRow && candidate && candidate.depth > currentRow.depth) {
+      focusRowInput(candidate.id);
+    }
+  }
+
+  function handleRowKeyDown(event: KeyboardEvent<HTMLInputElement>, targetId: string, rowIndex: number) {
+    if (event.key === "Tab" && !event.altKey && !event.ctrlKey && !event.metaKey) {
+      event.preventDefault();
+      setRows((prevRows) => shiftRowAndSubtreeDepth(prevRows, targetId, event.shiftKey));
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setMode("normal");
+      return;
+    }
+
+    if (mode !== "normal" || event.altKey || event.ctrlKey || event.metaKey) {
+      return;
+    }
+
+    if (event.key === "i") {
+      event.preventDefault();
+      setMode("insert");
+      requestAnimationFrame(() => {
+        focusRowInput(targetId, true);
+      });
+      return;
+    }
+
+    if (event.key === "j") {
+      event.preventDefault();
+      focusNextVisibleRow(rowIndex);
+      return;
+    }
+
+    if (event.key === "k") {
+      event.preventDefault();
+      focusPreviousVisibleRow(rowIndex);
+      return;
+    }
+
+    if (event.key === "h") {
+      event.preventDefault();
+      focusParentVisibleRow(rowIndex);
+      return;
+    }
+
+    if (event.key === "l") {
+      event.preventDefault();
+      focusFirstChildVisibleRow(rowIndex);
       return;
     }
 
     event.preventDefault();
-    setRows((prevRows) => shiftRowAndSubtreeDepth(prevRows, targetId, event.shiftKey));
   }
 
   return (
@@ -291,16 +392,27 @@ export function OutlinerWireframe() {
                   </span>
                 )}
                 <input
+                  ref={(node) => {
+                    inputRefs.current[row.id] = node;
+                  }}
                   className="outline-input"
                   value={row.text}
                   onChange={(event) => handleRowChange(row.id, event.target.value)}
-                  onKeyDown={(event) => handleRowKeyDown(event, row.id)}
+                  onKeyDown={(event) => handleRowKeyDown(event, row.id, index)}
                   aria-label={`Row ${index + 1}`}
                 />
               </li>
             );
           })}
         </ul>
+      </div>
+
+      <div
+        className={`outline-mode-indicator outline-mode-indicator--${mode}`}
+        role="status"
+        aria-live="polite"
+      >
+        {mode.toUpperCase()}
       </div>
     </div>
   );

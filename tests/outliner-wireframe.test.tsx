@@ -119,4 +119,80 @@ describe("OutlinerWireframe", () => {
     const rows = loadSavedRows();
     expect(rows.find((row) => row.id === "row-1")?.depth).toBe(0);
   });
+
+  it("navigates between adjacent rows with j and k in normal mode", async () => {
+    localStorage.clear();
+    render(<OutlinerWireframe />);
+
+    const mvpScopeInput = (await screen.findByDisplayValue("MVP scope")) as HTMLInputElement;
+    await userEvent.click(mvpScopeInput);
+    await userEvent.keyboard("{Escape}");
+    await userEvent.keyboard("j");
+
+    const wireframeInput = (await screen.findByDisplayValue("Wireframe visuals")) as HTMLInputElement;
+    expect(document.activeElement).toBe(wireframeInput);
+    expect(mvpScopeInput.value).toBe("MVP scope");
+
+    await userEvent.keyboard("k");
+    expect(document.activeElement).toBe(mvpScopeInput);
+  });
+
+  it("navigates hierarchy with h and l in normal mode", async () => {
+    localStorage.clear();
+    render(<OutlinerWireframe />);
+
+    const childInput = (await screen.findByDisplayValue("Wireframe visuals")) as HTMLInputElement;
+    await userEvent.click(childInput);
+    await userEvent.keyboard("{Escape}");
+    await userEvent.keyboard("h");
+
+    const parentInput = (await screen.findByDisplayValue("MVP scope")) as HTMLInputElement;
+    expect(document.activeElement).toBe(parentInput);
+
+    await userEvent.keyboard("l");
+    expect(document.activeElement).toBe(childInput);
+  });
+
+  it("returns to insert mode with i after normal mode", async () => {
+    localStorage.clear();
+    render(<OutlinerWireframe />);
+
+    const mvpScopeInput = (await screen.findByDisplayValue("MVP scope")) as HTMLInputElement;
+    await userEvent.click(mvpScopeInput);
+    await userEvent.keyboard("{Escape}");
+    await userEvent.keyboard("i");
+    await userEvent.keyboard("!");
+
+    expect(mvpScopeInput.value).toBe("MVP scope!");
+  });
+
+  it("shows a mode indicator and updates it on Escape and i", async () => {
+    localStorage.clear();
+    render(<OutlinerWireframe />);
+
+    expect(await screen.findByText("INSERT")).not.toBeNull();
+
+    const mvpScopeInput = await screen.findByDisplayValue("MVP scope");
+    await userEvent.click(mvpScopeInput);
+    await userEvent.keyboard("{Escape}");
+
+    expect(await screen.findByText("NORMAL")).not.toBeNull();
+
+    await userEvent.keyboard("i");
+    expect(await screen.findByText("INSERT")).not.toBeNull();
+  });
+
+  it("keeps rows visible and blocks plain text input in normal mode", async () => {
+    localStorage.clear();
+    render(<OutlinerWireframe />);
+
+    const mvpScopeInput = (await screen.findByDisplayValue("MVP scope")) as HTMLInputElement;
+    await userEvent.click(mvpScopeInput);
+    await userEvent.keyboard("{Escape}");
+    await userEvent.keyboard("x");
+
+    expect(await screen.findByDisplayValue("Project Brain Dump")).not.toBeNull();
+    expect(await screen.findByDisplayValue("MVP scope")).not.toBeNull();
+    expect(mvpScopeInput.value).toBe("MVP scope");
+  });
 });
