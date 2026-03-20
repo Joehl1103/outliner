@@ -208,6 +208,28 @@ export function OutlinerWireframe() {
     });
   }
 
+  function setRowCollapsed(targetId: string, shouldCollapse: boolean) {
+    if (!parentRowIds.has(targetId)) {
+      return;
+    }
+
+    setCollapsedById((prev) => {
+      const isCollapsed = Boolean(prev[targetId]);
+      if (isCollapsed === shouldCollapse) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      if (shouldCollapse) {
+        next[targetId] = true;
+      } else {
+        delete next[targetId];
+      }
+
+      return next;
+    });
+  }
+
   function handleInsertSiblingRow(targetId: string) {
     const insertion = insertSiblingRow(rows, targetId);
     if (!insertion.insertedRowId) {
@@ -340,6 +362,20 @@ export function OutlinerWireframe() {
       event.preventDefault();
       setMode("normal");
       return;
+    }
+
+    if (mode === "normal" && event.metaKey && !event.altKey && !event.ctrlKey) {
+      if (event.key === "j") {
+        event.preventDefault();
+        setRowCollapsed(targetId, false);
+        return;
+      }
+
+      if (event.key === "k") {
+        event.preventDefault();
+        setRowCollapsed(targetId, true);
+        return;
+      }
     }
 
     if (mode !== "normal" || event.altKey || event.ctrlKey || event.metaKey) {

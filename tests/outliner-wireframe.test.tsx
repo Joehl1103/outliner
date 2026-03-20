@@ -1,5 +1,5 @@
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { OutlinerWireframe } from "@/components/OutlinerWireframe";
@@ -206,6 +206,27 @@ describe("OutlinerWireframe", () => {
 
     await userEvent.keyboard("l");
     expect(document.activeElement).toBe(childInput);
+  });
+
+  it("expands and collapses the current row's children with cmd+j and cmd+k in normal mode", async () => {
+    localStorage.clear();
+    render(<OutlinerWireframe />);
+
+    const parentInput = (await screen.findByDisplayValue("MVP scope")) as HTMLInputElement;
+    await userEvent.click(parentInput);
+    await userEvent.keyboard("{Escape}");
+
+    fireEvent.keyDown(parentInput, { key: "k", metaKey: true });
+
+    expect(screen.queryByDisplayValue("Wireframe visuals")).toBeNull();
+    expect(screen.queryByDisplayValue("Browser persistence")).toBeNull();
+    expect(localStorage.getItem(OUTLINE_COLLAPSE_STORAGE_KEY)).toContain("row-2");
+
+    fireEvent.keyDown(parentInput, { key: "j", metaKey: true });
+
+    expect(await screen.findByDisplayValue("Wireframe visuals")).not.toBeNull();
+    expect(await screen.findByDisplayValue("Browser persistence")).not.toBeNull();
+    expect(localStorage.getItem(OUTLINE_COLLAPSE_STORAGE_KEY)).not.toContain("row-2");
   });
 
   it("returns to insert mode with i after normal mode", async () => {
