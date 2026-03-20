@@ -166,20 +166,27 @@ describe("OutlinerWireframe", () => {
     expect(mvpScopeInput.value).toBe("MVP scope!");
   });
 
-  it("shows a mode indicator and updates it on Escape and i", async () => {
+  it("shows a top-centered mode indicator and updates it on Escape and i", async () => {
     localStorage.clear();
-    render(<OutlinerWireframe />);
+    const { container } = render(<OutlinerWireframe />);
 
-    expect(await screen.findByText("INSERT")).not.toBeNull();
+    const statusBar = container.querySelector(".outline-status-bar");
+    const canvas = container.querySelector(".outline-canvas");
+    expect(statusBar).not.toBeNull();
+    expect(canvas).not.toBeNull();
+    expect(statusBar?.nextElementSibling).toBe(canvas);
+
+    const modeIndicator = await screen.findByRole("status");
+    expect(modeIndicator.textContent).toBe("INSERT");
 
     const mvpScopeInput = await screen.findByDisplayValue("MVP scope");
     await userEvent.click(mvpScopeInput);
     await userEvent.keyboard("{Escape}");
 
-    expect(await screen.findByText("NORMAL")).not.toBeNull();
+    expect(modeIndicator.textContent).toBe("NORMAL");
 
     await userEvent.keyboard("i");
-    expect(await screen.findByText("INSERT")).not.toBeNull();
+    expect(modeIndicator.textContent).toBe("INSERT");
   });
 
   it("keeps rows visible and blocks plain text input in normal mode", async () => {

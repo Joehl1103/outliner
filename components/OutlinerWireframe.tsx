@@ -334,6 +334,16 @@ export function OutlinerWireframe() {
 
   return (
     <div className="outline-ui">
+      <div className="outline-status-bar">
+        <div
+          className={`outline-mode-indicator outline-mode-indicator--${mode}`}
+          role="status"
+          aria-live="polite"
+        >
+          {mode.toUpperCase()}
+        </div>
+      </div>
+
       <div className={`outline-canvas outline-canvas--${ACTIVE_UI_STYLE}`}>
         <div className="outline-guide-layer" aria-hidden="true">
           {guideSegments.map((segment) => (
@@ -405,14 +415,6 @@ export function OutlinerWireframe() {
             );
           })}
         </ul>
-      </div>
-
-      <div
-        className={`outline-mode-indicator outline-mode-indicator--${mode}`}
-        role="status"
-        aria-live="polite"
-      >
-        {mode.toUpperCase()}
       </div>
     </div>
   );

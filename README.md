@@ -8,6 +8,7 @@ Workflowy-style outliner MVP wireframe built with Next.js.
 - Browser persistence via `localStorage`
 - Seeded default outline on first load
 - 3-way guide style toggle (`Layered Guides`, `Row Guides`, `DOM Columns`)
+- Vim-style `INSERT` / `NORMAL` mode indicator centered at the top of the editor
 
 ## Run Locally
 
