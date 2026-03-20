@@ -5,6 +5,8 @@ Workflowy-style outliner MVP wireframe built with Next.js.
 ## Current Scope
 
 - Always-editable rows (changes saved per keystroke)
+- Press `Enter` to create a new sibling bullet
+- Press `Backspace` on an empty bullet to remove it and focus the previous bullet
 - Browser persistence via `localStorage`
 - Seeded default outline on first load
 - 3-way guide style toggle (`Layered Guides`, `Row Guides`, `DOM Columns`)

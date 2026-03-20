@@ -34,6 +34,61 @@ describe("OutlinerWireframe", () => {
     expect(container.querySelectorAll(".outline-guide-segment")).toHaveLength(3);
   });
 
+  it("creates a blank sibling bullet when Enter is pressed on a leaf row", async () => {
+    localStorage.clear();
+    render(<OutlinerWireframe />);
+
+    const tomorrowInput = (await screen.findByDisplayValue("Tomorrow")) as HTMLInputElement;
+    await userEvent.click(tomorrowInput);
+    await userEvent.keyboard("{Enter}");
+
+    const rows = loadSavedRows();
+    expect(rows).toHaveLength(9);
+    expect(rows[8]?.text).toBe("");
+    expect(rows[8]?.depth).toBe(1);
+
+    const newRowInput = screen.getByLabelText("Row 9") as HTMLInputElement;
+    expect(newRowInput.value).toBe("");
+    expect(document.activeElement).toBe(newRowInput);
+  });
+
+  it("inserts a parent row's new sibling after its descendants", async () => {
+    localStorage.clear();
+    render(<OutlinerWireframe />);
+
+    const parentInput = (await screen.findByDisplayValue("MVP scope")) as HTMLInputElement;
+    await userEvent.click(parentInput);
+    await userEvent.keyboard("{Enter}");
+
+    const rows = loadSavedRows();
+    expect(rows).toHaveLength(9);
+    expect(rows[2]?.id).toBe("row-3");
+    expect(rows[3]?.id).toBe("row-4");
+    expect(rows[4]?.text).toBe("");
+    expect(rows[4]?.depth).toBe(1);
+    expect(rows[5]?.id).toBe("row-5");
+  });
+
+  it("removes an empty bullet on Backspace and focuses the previous visible row", async () => {
+    localStorage.clear();
+    render(<OutlinerWireframe />);
+
+    const tomorrowInput = (await screen.findByDisplayValue("Tomorrow")) as HTMLInputElement;
+    await userEvent.click(tomorrowInput);
+    await userEvent.keyboard("{Enter}");
+
+    const newRowInput = screen.getByLabelText("Row 9") as HTMLInputElement;
+    expect(document.activeElement).toBe(newRowInput);
+
+    await userEvent.keyboard("{Backspace}");
+
+    const rows = loadSavedRows();
+    expect(rows).toHaveLength(8);
+    expect(rows[7]?.text).toBe("Tomorrow");
+    expect(screen.queryByLabelText("Row 9")).toBeNull();
+    expect(document.activeElement).toBe(tomorrowInput);
+  });
+
   it("collapses and expands descendants for parent rows", async () => {
     localStorage.clear();
     const { container } = render(<OutlinerWireframe />);

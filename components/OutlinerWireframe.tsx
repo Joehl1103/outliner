@@ -8,6 +8,7 @@ import {
   saveOutline,
   type CollapsedById,
 } from "@/lib/outline/storage";
+import { findSubtreeEndIndex, insertSiblingRow, removeRow } from "@/lib/outline/rowOperations";
 import { computeChildGuideSegments } from "@/lib/outline/treeGuides";
 import type { OutlineRow } from "@/lib/outline/types";
 
@@ -68,25 +69,6 @@ function computeVisibleRows(
   return visibleRows;
 }
 
-function findSubtreeEndIndex(rows: OutlineRow[], startIndex: number): number {
-  const parentDepth = rows[startIndex]?.depth;
-  if (typeof parentDepth !== "number") {
-    return startIndex;
-  }
-
-  let endIndex = startIndex;
-
-  for (let index = startIndex + 1; index < rows.length; index += 1) {
-    if (rows[index].depth <= parentDepth) {
-      break;
-    }
-
-    endIndex = index;
-  }
-
-  return endIndex;
-}
-
 function shiftRowAndSubtreeDepth(rows: OutlineRow[], targetId: string, outdent: boolean): OutlineRow[] {
   const rowIndex = rows.findIndex((row) => row.id === targetId);
   if (rowIndex < 0) {
@@ -126,6 +108,7 @@ export function OutlinerWireframe() {
   const [mode, setMode] = useState<EditorMode>("insert");
   const [collapsedById, setCollapsedById] = useState<CollapsedById>({});
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [pendingFocusRowId, setPendingFocusRowId] = useState<string | null>(null);
   const [guideSegments, setGuideSegments] = useState<RenderedGuideSegment[]>([]);
   const listRef = useRef<HTMLUListElement | null>(null);
   const bulletRefs = useRef<Record<string, HTMLElement | null>>({});
@@ -225,6 +208,38 @@ export function OutlinerWireframe() {
     });
   }
 
+  function handleInsertSiblingRow(targetId: string) {
+    const insertion = insertSiblingRow(rows, targetId);
+    if (!insertion.insertedRowId) {
+      return;
+    }
+
+    setRows(insertion.rows);
+    setPendingFocusRowId(insertion.insertedRowId);
+  }
+
+  function handleRemoveEmptyRow(targetId: string, rowIndex: number) {
+    const nextRows = removeRow(rows, targetId);
+    if (nextRows === rows) {
+      return;
+    }
+
+    const previousVisibleRow = visibleRows[rowIndex - 1];
+    const nextVisibleRow = visibleRows[rowIndex + 1];
+
+    setRows(nextRows);
+    setCollapsedById((prev) => {
+      if (!(targetId in prev)) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      delete next[targetId];
+      return next;
+    });
+    setPendingFocusRowId(previousVisibleRow?.id ?? nextVisibleRow?.id ?? null);
+  }
+
   function focusRowInput(targetId: string, placeCursorAtEnd = false) {
     const targetInput = inputRefs.current[targetId];
     if (!targetInput) {
@@ -240,6 +255,15 @@ export function OutlinerWireframe() {
     const cursorPosition = targetInput.value.length;
     targetInput.setSelectionRange(cursorPosition, cursorPosition);
   }
+
+  useLayoutEffect(() => {
+    if (!pendingFocusRowId) {
+      return;
+    }
+
+    focusRowInput(pendingFocusRowId);
+    setPendingFocusRowId(null);
+  }, [pendingFocusRowId, visibleRows]);
 
   function focusPreviousVisibleRow(currentIndex: number) {
     const previousRow = visibleRows[currentIndex - 1];
@@ -280,6 +304,32 @@ export function OutlinerWireframe() {
   }
 
   function handleRowKeyDown(event: KeyboardEvent<HTMLInputElement>, targetId: string, rowIndex: number) {
+    const currentRow = visibleRows[rowIndex];
+
+    if (event.key === "Enter" && !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey) {
+      if (mode === "insert") {
+        event.preventDefault();
+        handleInsertSiblingRow(targetId);
+      }
+
+      return;
+    }
+
+    if (
+      (event.key === "Backspace" || event.key === "Delete") &&
+      !event.shiftKey &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey
+    ) {
+      if (mode === "insert" && currentRow?.text === "") {
+        event.preventDefault();
+        handleRemoveEmptyRow(targetId, rowIndex);
+      }
+
+      return;
+    }
+
     if (event.key === "Tab" && !event.altKey && !event.ctrlKey && !event.metaKey) {
       event.preventDefault();
       setRows((prevRows) => shiftRowAndSubtreeDepth(prevRows, targetId, event.shiftKey));
